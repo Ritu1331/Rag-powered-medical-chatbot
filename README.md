@@ -10,7 +10,7 @@ The application combines semantic search with language generation to make medica
 
 ## 🌐 Live Demo
 
-**Try MediBot:** [[Open Medical Chatbot](YOUR_STREAMLIT_DEPLOYMENT_URL)](https://medical-rag-chatbot-ritu.streamlit.app/)
+**Try MediBot:** https://medical-rag-chatbot-ritu.streamlit.app/
 
 
 
@@ -18,31 +18,18 @@ The application combines semantic search with language generation to make medica
 
 ## 📸 Application Screenshots
 
-### 1. MediBot Home Page
-
-The homepage provides a clean interface with a welcome section, suggested medical questions, and a chat input area.
-
-![MediBot Home Page](screenshots/home.png)
-
-### 2. Chat Interface
+### 1. Chat Interface
 
 Users can enter medical questions and interact with the chatbot through a conversational interface.
 
-![MediBot Chat Interface](screenshots/chat.png)
+![MediBot Chat Interface](screenshots/interface.png)
 
-### 3. Generated Medical Response
+### 2. Generated Medical Response
 
 MediBot retrieves relevant medical information and generates an easy-to-understand response.
 
-![MediBot Generated Answer](screenshots/answer.png)
+![MediBot Generated Answer](screenshots/demo.png)
 
-### 4. Retrieved Medical Sources
-
-The application displays the retrieved source documents and page information to help users understand where the information came from.
-
-![MediBot Medical Sources](screenshots/sources.png)
-
-> **Note:** The screenshot filenames above are suggested names. Rename your actual screenshots accordingly or update the image paths to match the files in your `screenshots/` folder. GitHub displays images directly when the paths are correct.
 
 ---
 
@@ -474,10 +461,8 @@ Rag-powered-medical-chatbot/
 │   └── encyclopedia-of-medicine.pdf
 │
 └── screenshots/
-    ├── home.png
-    ├── chat.png
-    ├── answer.png
-    └── sources.png
+    ├── interface.png
+    ├── demo.png
 ```
 
 **File descriptions**
