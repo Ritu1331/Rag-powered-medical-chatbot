@@ -1,6 +1,7 @@
 # backend.py
 import os
 import re
+import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -14,87 +15,89 @@ from transformers import pipeline
 INDEX_NAME = "medicalbot"
 
 # =========================
-# EMBEDDINGS
+# CACHE VECTORSTORE ⚡
 # =========================
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+@st.cache_resource
+def load_vectorstore():
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+
+    return Pinecone.from_existing_index(
+        index_name=INDEX_NAME,
+        embedding=embeddings
+    )
+
+vectorstore = load_vectorstore()
+retriever = vectorstore.as_retriever(search_kwargs={"k": 5})  # 🔥 less noise
 
 # =========================
-# VECTORSTORE
+# CACHE MODEL ⚡
 # =========================
-vectorstore = Pinecone.from_existing_index(
-    index_name=INDEX_NAME,
-    embedding=embeddings
-)
+@st.cache_resource
+def load_model():
+    return pipeline(
+        "text2text-generation",
+        model="google/flan-t5-large",   # ⚡ faster than large
+        max_new_tokens=400,
+        do_sample=False
+    )
 
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
-
-# =========================
-# LLM
-# =========================
-qa_pipeline = pipeline(
-    "text2text-generation",
-    model="google/flan-t5-large",
-    max_new_tokens=450,
-    temperature=0.2,
-    repetition_penalty=1.3,
-    do_sample=False
-)
+qa_pipeline = load_model()
 
 # =========================
 # HELPERS
 # =========================
-def clean_text(text: str) -> str:
-    text = re.sub(r"/C\d+", "", text)
+def clean_text(text):
+    text = re.sub(r"/C\d+", "", text)  # remove weird codes
     text = re.sub(r"\s+", " ", text)
+    text = text.replace("-", " ")      # fix broken words
     return text.strip()
-
-
-def extract_section(text, start, end_list):
-    if start not in text:
-        return ""
-    part = text.split(start, 1)[1]
-    for end in end_list:
-        if end in part:
-            part = part.split(end, 1)[0]
-    return part.strip()
 
 
 def format_bullets(text):
     sentences = re.split(r"[.;]\s+", text)
-    bullets = [f"- {s.strip()}" for s in sentences if len(s.strip()) > 20]
-    return "\n".join(bullets)
+    return "\n".join([f"- {s.strip()}" for s in sentences if len(s.strip()) > 15])
 
+
+def extract_section(text, section):
+    pattern = rf"{section}\s*[:\-]?\s*(.*?)(?=\n[A-Z][a-z ]+[:\-]|$)"
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else ""
 
 # =========================
 # CONTEXT
 # =========================
-def get_context_from_pinecone(query):
+def get_context(query):
     docs = retriever.invoke(query)
     return "\n\n".join(clean_text(doc.page_content) for doc in docs)
 
-
 # =========================
-# ANSWER GENERATION
+# ANSWER FUNCTION
 # =========================
-def generate_answer(query: str) -> str:
-    context = get_context_from_pinecone(query)
+def generate_answer(query):
+    context = get_context(query)
 
-    if not context:
+    if not context.strip():
         return "⚠️ No relevant medical information found."
 
     prompt = f"""
 You are a medical assistant.
 
-Write the answer using the following sections ONLY:
-Definition
-Causes
-Symptoms
-Treatment
-When to see a doctor
+Extract information STRICTLY from the context and return ONLY in JSON format:
 
-Keep language simple for patients.
+{{
+"definition": "...",
+"causes": ["...", "..."],
+"symptoms": ["...", "..."],
+"treatment": ["...", "..."],
+"doctor": ["...", "..."]
+}}
+
+Rules:
+- Do not add extra text
+- Do not explain outside JSON
+- Keep answers short and clear
 
 Context:
 {context}
@@ -104,19 +107,31 @@ Question:
 """
 
     raw = qa_pipeline(prompt)[0]["generated_text"]
-    raw = clean_text(raw)
 
-    sections = ["Definition", "Causes", "Symptoms", "Treatment", "When to see a doctor"]
+    # -------------------------
+    # SAFE PARSING
+    # -------------------------
+    import json
 
-    output = ""
+    try:
+        data = json.loads(raw)
+    except:
+        return "⚠️ Could not generate structured answer. Try again."
 
-    for i, sec in enumerate(sections):
-        content = extract_section(raw, sec, sections[i+1:])
-        if content:
-            output += f"### {sec}\n{format_bullets(content)}\n\n"
+    # -------------------------
+    # FORMAT OUTPUT
+    # -------------------------
+    def format_list(items):
+        if not items:
+            return "- Not clearly mentioned"
+        return "\n".join([f"- {i}" for i in items])
 
-    # 🔥 FINAL FALLBACK (never empty)
-    if not output.strip():
-        return raw
+    final = "## 🧠 Medical Answer\n\n"
 
-    return output.strip()
+    final += f"### Definition\n- {data.get('definition','Not found')}\n\n"
+    final += f"### Causes\n{format_list(data.get('causes',[]))}\n\n"
+    final += f"### Symptoms\n{format_list(data.get('symptoms',[]))}\n\n"
+    final += f"### Treatment\n{format_list(data.get('treatment',[]))}\n\n"
+    final += f"### When to see a doctor\n{format_list(data.get('doctor',[]))}\n\n"
+
+    return final

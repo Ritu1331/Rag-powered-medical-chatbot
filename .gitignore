@@ -1,0 +1,91 @@
+
+# =================================
+# PYTHON CACHE FILES
+# =================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =================================
+# VIRTUAL ENVIRONMENTS
+# =================================
+
+env/
+venv/
+ENV/
+.venv/
+
+# =================================
+# ENVIRONMENT VARIABLES / SECRETS
+# =================================
+
+.env
+.env.*
+!.env.example
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# =================================
+# JUPYTER NOTEBOOK
+# =================================
+
+.ipynb_checkpoints/
+
+# =================================
+# IDE / EDITOR FILES
+# =================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =================================
+# LOGS
+# =================================
+
+*.log
+logs/
+
+# =================================
+# MODEL AND ML FILES
+# =================================
+
+*.h5
+*.keras
+*.pt
+*.pth
+*.pkl
+*.joblib
+*.onnx
+
+# Hugging Face cache
+.cache/
+cache/
+models/
+
+# =================================
+# MEDICAL PDF DOCUMENTS
+# =================================
+
+documents/*.pdf
+
+# =================================
+# OS FILES
+# =================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =================================
+# TEST / TEMPORARY FILES
+# =================================
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+temp/
+tmp/
